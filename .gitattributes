@@ -1,0 +1,9 @@
+# Default: auto-detect
+* text=auto
+
+# Shell scripts must stay LF (Unix line endings)
+*.sh text eol=lf
+*.command text eol=lf
+
+# Windows batch files stay CRLF
+*.bat text eol=crlf

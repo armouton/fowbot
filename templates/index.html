@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FoWBot: A Tiny Trainable Language Model</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="/static/chart.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>FoWBot: A Tiny Trainable Language Model</h1>
+        <p class="subtitle">ECN 373: The Future of Work</p>
+    </header>
+
+    <div id="status-bar">
+        <span id="model-status">No model trained</span>
+    </div>
+
+    <main>
+        <section id="training-section">
+            <h2>Train Model</h2>
+            <div class="controls-row">
+                <label>
+                    Dataset
+                    <select id="dataset-select"></select>
+                </label>
+                <label>
+                    Epochs
+                    <input type="number" id="epochs-input" value="100" min="1" max="500">
+                </label>
+                <label>
+                    Learning Rate
+                    <select id="lr-select">
+                        <option value="0.5">Slow (0.5)</option>
+                        <option value="1.0" selected>Medium (1.0)</option>
+                        <option value="3.0">Fast (3.0)</option>
+                    </select>
+                </label>
+                <label>
+                    Architecture
+                    <select id="arch-select" onchange="updateContextLabel()">
+                        <option value="feedforward" selected>Simple (Feedforward)</option>
+                        <option value="lstm">Advanced (LSTM)</option>
+                    </select>
+                </label>
+                <label>
+                    Model Size
+                    <select id="size-select">
+                        <option value="64">Small (64)</option>
+                        <option value="256" selected>Medium (256)</option>
+                        <option value="512">Large (512)</option>
+                    </select>
+                </label>
+                <label>
+                    <span id="context-label">Context Words</span>
+                    <select id="context-select">
+                        <option value="3">3</option>
+                        <option value="5" selected>5</option>
+                        <option value="10">10</option>
+                        <option value="20">20</option>
+                    </select>
+                </label>
+                <label class="upload-label">
+                    Upload your own text
+                    <input type="file" id="file-upload" accept=".txt,.docx,.rtf,.text" onchange="uploadFile()">
+                </label>
+                <span id="upload-status"></span>
+            </div>
+            <div class="buttons-row">
+                <button id="train-btn" onclick="startTraining()">Train</button>
+                <button id="stop-btn" onclick="stopTraining()" disabled>Stop</button>
+            </div>
+            <div id="training-info">
+                <span id="epoch-display"></span>
+            </div>
+            <div class="chart-container">
+                <canvas id="loss-chart"></canvas>
+            </div>
+        </section>
+
+        <section id="prediction-section">
+            <h2>Predict Next Word</h2>
+            <div class="controls-row">
+                <input type="text" id="context-input"
+                       placeholder="Type some words, e.g. 'to be or'"
+                       onkeydown="if(event.key==='Enter') getPredictions()">
+                <label>
+                    Words
+                    <input type="number" id="nwords-input" value="1" min="1" max="500">
+                </label>
+                <button id="predict-btn" onclick="getPredictions()">Predict</button>
+            </div>
+            <div id="predictions-display"></div>
+        </section>
+
+        <section id="help-section">
+            <h2>How It Works</h2>
+            <p>This tool trains a small neural network to predict the next word in a sentence, based on the text you choose. It demonstrates how language models learn patterns from data.</p>
+            <ol>
+                <li><strong>Choose a dataset</strong> (or upload your own .txt or .docx file), set your parameters, then click <strong>Train</strong>.</li>
+                <li><strong>Watch the loss curve</strong> &mdash; as the model learns, the loss (error) should decrease.</li>
+                <li>Once trained, <strong>type a few words</strong> and click <strong>Predict</strong> to see what the model thinks comes next. Set <strong>Words</strong> &gt; 1 to generate a longer sequence.</li>
+            </ol>
+        </section>
+
+        <section id="architecture-section">
+            <h2>Architecture and Training</h2>
+            <p>FoWBot offers two neural network architectures, both of which learn to predict the next word from context.</p>
+            <p><strong>Feedforward</strong> is the simpler architecture. An <strong>embedding layer</strong> converts each word in the context window into a vector of numbers. These embeddings are concatenated and passed through a <strong>hidden layer</strong>, which detects patterns across the context words. An <strong>output layer</strong> then produces a probability for every word in the vocabulary. The key limitation is that the feedforward model treats its context window like a snapshot: it sees all the words at once but has no sense of their order beyond their position in the input, and once a word falls outside the window, it is forgotten completely. If you ask it to continue a sentence, each prediction is made independently &mdash; the model has no memory of what it predicted a moment ago beyond what fits in the window.</p>
+            <p><strong>LSTM</strong> (Long Short-Term Memory) addresses this by processing words one at a time in sequence, maintaining a <strong>hidden state</strong> that accumulates information as it reads. Think of the hidden state as a summary of everything the model has read so far, compressed into a fixed-size vector. At each step, three <strong>gates</strong> control this summary: a <em>forget gate</em> decides what to discard, an <em>input gate</em> decides what new information to add, and an <em>output gate</em> decides what to reveal for the current prediction. This allows the LSTM to be selective &mdash; it can learn to remember that a sentence started with &ldquo;shall I&rdquo; even after processing several intervening words, while forgetting irrelevant details. The result is that the LSTM can capture patterns that span longer distances than the feedforward model&rsquo;s fixed window allows.</p>
+            <p><strong>Transformers</strong> (not included in FoWBot, but used by GPT, Claude, and other modern language models) take a different approach entirely. Instead of processing words one at a time like the LSTM, a transformer uses an <strong>attention mechanism</strong> that lets every word in the context directly &ldquo;look at&rdquo; every other word, weighted by relevance. This means a transformer can instantly connect a pronoun to the noun it refers to, or link a verb to its subject, regardless of how far apart they are &mdash; without needing to pass information step-by-step through a hidden state. Transformers also stack many layers deep (GPT-3 has 96 layers; FoWBot has 1), and they train on vastly more data (hundreds of billions of words vs. the thousands of words here). The combination of attention, depth, and scale is what gives modern language models their remarkable fluency.</p>
+            <p>All three architectures are trained the same fundamental way: the model reads through text and, for each position, tries to predict the next word. It compares its prediction to the actual next word using <strong>cross-entropy loss</strong> (the number shown on the loss curve), then adjusts its weights using <strong>gradient descent</strong> to make that mistake less likely next time. One full pass through the dataset is called an <strong>epoch</strong>. This is the same process used by the largest language models &mdash; FoWBot just does it on a much smaller scale.</p>
+        </section>
+
+        <section id="parameters-section">
+            <h2>Parameter Trade-offs</h2>
+            <p><strong>Architecture</strong> is the most fundamental choice. The feedforward model is fast and easy to understand: it looks at a fixed window of words and makes a prediction. The LSTM is slower to train but can learn longer-range patterns because it processes words sequentially and carries information forward through its hidden state. Try generating 20+ words with each architecture to see the difference in coherence.</p>
+            <p><strong>Epochs</strong> control how many times the model sees the training data. Too few epochs and the model barely learns; too many and it <em>memorizes</em> the training text so thoroughly that it can only reproduce exact phrases rather than generalize. This tension between <strong>underfitting</strong> (too little learning) and <strong>overfitting</strong> (too much memorization) is central to all of machine learning. You will likely see the loss drop to nearly zero after 100 or so epochs &mdash; this means the model has essentially memorized the training text. An overfit model can reproduce Shakespeare perfectly, but it hasn&rsquo;t truly &ldquo;learned&rdquo; English; it has just stored the specific sequences it was trained on. If you give it a prompt it hasn&rsquo;t seen, its predictions will be poor. Real language models combat overfitting by training on enormous, diverse datasets so that memorization is impractical and the model is forced to learn general patterns instead.</p>
+            <p><strong>Learning rate</strong> determines how aggressively the model updates its weights after each mistake. A low learning rate learns slowly but steadily. A high learning rate converges faster but risks <strong>instability</strong> &mdash; the model may overshoot good solutions and oscillate rather than improve. Try the &ldquo;Fast&rdquo; setting to see this in action: the loss curve may bounce around instead of falling smoothly. The LSTM is generally more sensitive to high learning rates than the feedforward model because gradients must flow backward through many timesteps.</p>
+            <p><strong>Model size</strong> (the number of hidden units) controls the model's capacity &mdash; how many patterns it can learn simultaneously. A small model is forced to learn only the most common patterns, producing generic predictions. A large model can capture subtler relationships, but with limited training data it may memorize rather than generalize. This is the <strong>creativity vs. repetition</strong> trade-off: more capacity enables richer output, but also makes overfitting easier.</p>
+            <p><strong>Context words / Sequence length</strong> determines how far back the model looks when predicting. For the feedforward model, this is a hard window &mdash; with context 3, only the last 3 words matter. For the LSTM, this is the length of sequence used during training (the LSTM can still carry information beyond this when generating, through its hidden state). Longer sequences enable the model to learn deeper dependencies but require more data and computation.</p>
+            <p><strong>Training data</strong> is arguably the most important factor of all. The model can only learn patterns that exist in its training text. Train on Shakespeare and it speaks in iambic pentameter; train on Dr. Seuss and it rhymes. This is true of all language models &mdash; their &ldquo;knowledge&rdquo; is entirely a reflection of the data they were trained on, with all its strengths and biases.</p>
+        </section>
+    </main>
+
+    <footer>
+        Created by Andre Mouton. Built with assistance from Claude (Anthropic).
+    </footer>
+
+    <script>
+    let lossChart = null;
+
+    document.addEventListener("DOMContentLoaded", () => {
+        loadDatasets();
+        updateStatus();
+        initChart();
+    });
+
+    function initChart() {
+        const ctx = document.getElementById("loss-chart").getContext("2d");
+        lossChart = new Chart(ctx, {
+            type: "line",
+            data: {
+                labels: [],
+                datasets: [{
+                    label: "Training Loss",
+                    data: [],
+                    borderColor: "#2563eb",
+                    backgroundColor: "rgba(37, 99, 235, 0.1)",
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 2,
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: "Epoch" } },
+                    y: { title: { display: true, text: "Loss" }, beginAtZero: false }
+                },
+                animation: { duration: 0 }
+            }
+        });
+    }
+
+    async function loadDatasets() {
+        const res = await fetch("/datasets");
+        const files = await res.json();
+        const select = document.getElementById("dataset-select");
+        select.innerHTML = "";
+        files.forEach(f => {
+            const opt = document.createElement("option");
+            opt.value = f;
+            opt.textContent = f.replace(".txt", "").replace(/_/g, " ");
+            select.appendChild(opt);
+        });
+    }
+
+    async function uploadFile() {
+        const input = document.getElementById("file-upload");
+        const statusEl = document.getElementById("upload-status");
+        if (!input.files.length) return;
+
+        const formData = new FormData();
+        formData.append("file", input.files[0]);
+
+        statusEl.textContent = "Uploading...";
+        statusEl.className = "status-training";
+
+        try {
+            const res = await fetch("/upload", { method: "POST", body: formData });
+            const data = await res.json();
+
+            if (data.error) {
+                statusEl.textContent = data.error;
+                statusEl.className = "error";
+            } else {
+                statusEl.textContent = "Added: " + data.filename + " (" + data.word_count + " words)";
+                statusEl.className = "status-ready";
+                await loadDatasets();
+                // Select the newly uploaded file
+                document.getElementById("dataset-select").value = data.filename;
+            }
+        } catch (e) {
+            statusEl.textContent = "Upload failed.";
+            statusEl.className = "error";
+        }
+
+        // Reset file input so the same file can be re-uploaded
+        input.value = "";
+    }
+
+    async function updateStatus() {
+        const res = await fetch("/status");
+        const info = await res.json();
+        const el = document.getElementById("model-status");
+        if (info.is_training) {
+            el.textContent = "Training in progress...";
+            el.className = "status-training";
+        } else if (info.trained) {
+            const archName = (info.architecture || "feedforward") === "lstm" ? "LSTM" : "Feedforward";
+            el.textContent = "Model ready | " + archName + " | Dataset: " + info.dataset + " | Vocab: " + info.vocab_size + " words | Context: " + info.context_length + " words | Parameters: " + (info.parameters || 0).toLocaleString();
+            el.className = "status-ready";
+        } else {
+            el.textContent = "No model trained";
+            el.className = "status-idle";
+        }
+    }
+
+    async function startTraining() {
+        const dataset = document.getElementById("dataset-select").value;
+        const epochs = document.getElementById("epochs-input").value;
+        const learningRate = document.getElementById("lr-select").value;
+        const hiddenSize = document.getElementById("size-select").value;
+        const contextLength = document.getElementById("context-select").value;
+        const architecture = document.getElementById("arch-select").value;
+
+        // Reset chart
+        lossChart.data.labels = [];
+        lossChart.data.datasets[0].data = [];
+        lossChart.update();
+
+        document.getElementById("train-btn").disabled = true;
+        document.getElementById("stop-btn").disabled = false;
+        document.getElementById("epoch-display").textContent = "Starting...";
+
+        let response;
+        try {
+            response = await fetch("/train", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    dataset: dataset,
+                    epochs: parseInt(epochs),
+                    learning_rate: parseFloat(learningRate),
+                    hidden_size: parseInt(hiddenSize),
+                    context_length: parseInt(contextLength),
+                    architecture: architecture
+                })
+            });
+        } catch (e) {
+            document.getElementById("epoch-display").textContent = "Connection error.";
+            document.getElementById("train-btn").disabled = false;
+            document.getElementById("stop-btn").disabled = true;
+            return;
+        }
+
+        if (!response.ok) {
+            const err = await response.json();
+            document.getElementById("epoch-display").textContent = err.error || "Training failed to start.";
+            document.getElementById("train-btn").disabled = false;
+            document.getElementById("stop-btn").disabled = true;
+            return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = "";
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split("\n\n");
+            buffer = parts.pop();
+
+            for (const part of parts) {
+                const line = part.trim();
+                if (line.startsWith("data: ")) {
+                    try {
+                        const msg = JSON.parse(line.substring(6));
+                        handleTrainingMessage(msg);
+                    } catch (e) { /* skip malformed */ }
+                }
+            }
+        }
+
+        document.getElementById("train-btn").disabled = false;
+        document.getElementById("stop-btn").disabled = true;
+        updateStatus();
+    }
+
+    function handleTrainingMessage(msg) {
+        if (msg.error) {
+            document.getElementById("epoch-display").textContent = "Error: " + msg.error;
+            return;
+        }
+        if (msg.done) {
+            document.getElementById("epoch-display").textContent = "Training complete!";
+            return;
+        }
+
+        document.getElementById("epoch-display").textContent =
+            "Epoch " + msg.epoch + "/" + msg.total + "  \u2014  Loss: " + msg.loss.toFixed(4);
+
+        lossChart.data.labels.push(msg.epoch);
+        lossChart.data.datasets[0].data.push(msg.loss);
+        lossChart.update();
+    }
+
+    async function stopTraining() {
+        await fetch("/stop", { method: "POST" });
+        document.getElementById("stop-btn").disabled = true;
+        document.getElementById("epoch-display").textContent += " (stopping...)";
+    }
+
+    async function getPredictions() {
+        const context = document.getElementById("context-input").value.trim();
+        if (!context) return;
+
+        const nWords = parseInt(document.getElementById("nwords-input").value) || 1;
+        const display = document.getElementById("predictions-display");
+
+        const res = await fetch("/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ context: context, top_k: 5, n_words: nWords })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            display.innerHTML = '<p class="error">' + data.error + '</p>';
+            return;
+        }
+
+        if (nWords === 1) {
+            // Single-word mode: show bar chart of top predictions
+            const maxProb = data.predictions[0] ? data.predictions[0].probability : 1;
+            let html = '<p class="context-echo">Context: "' + escapeHtml(data.context) + '"</p>';
+            html += '<div class="predictions-list">';
+            data.predictions.forEach((p, i) => {
+                const widthPct = (p.probability / maxProb) * 100;
+                html += '<div class="prediction-row">' +
+                    '<span class="pred-rank">' + (i + 1) + '.</span>' +
+                    '<span class="pred-word">' + escapeHtml(p.word) + '</span>' +
+                    '<div class="pred-bar-bg"><div class="pred-bar" style="width:' + widthPct + '%"></div></div>' +
+                    '<span class="pred-prob">' + (p.probability * 100).toFixed(1) + '%</span>' +
+                    '</div>';
+            });
+            html += '</div>';
+            display.innerHTML = html;
+        } else {
+            // Multi-word mode: show generated sequence and step details
+            let html = '<div class="generated-result">';
+            html += '<p class="generated-label">Generated text:</p>';
+            html += '<p class="generated-text">' +
+                '<span class="generated-context">' + escapeHtml(data.context) + '</span> ' +
+                '<span class="generated-new">' + escapeHtml(data.generated_words.join(' ')) + '</span>' +
+                '</p>';
+
+            // Show step-by-step breakdown
+            html += '<div class="steps-detail">';
+            html += '<p class="steps-label">Step-by-step predictions:</p>';
+            data.steps.forEach((step, i) => {
+                html += '<div class="step-row">';
+                html += '<span class="step-num">' + (i + 1) + '.</span>';
+                html += '<span class="step-chosen">' + escapeHtml(step.predicted) + '</span>';
+                html += '<span class="step-alts">(';
+                html += step.alternatives.slice(0, 3).map(
+                    a => escapeHtml(a.word) + ' ' + (a.probability * 100).toFixed(1) + '%'
+                ).join(', ');
+                html += ')</span>';
+                html += '</div>';
+            });
+            html += '</div></div>';
+            display.innerHTML = html;
+        }
+    }
+
+    function updateContextLabel() {
+        const arch = document.getElementById("arch-select").value;
+        document.getElementById("context-label").textContent =
+            arch === "lstm" ? "Sequence Length" : "Context Words";
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    </script>
+</body>
+</html>
