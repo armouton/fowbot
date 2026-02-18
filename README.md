@@ -1,157 +1,108 @@
-# Next-Word Prediction Language Model
-## Educational Tool for Understanding AI and Language Models
+# FoWBot: A Tiny Trainable Language Model
+## Educational Tool for ECN373 — The Future of Work
 
 ### Overview
-This is a simple, educational language model that predicts the next word in a sentence. It runs in your web browser and lets you:
-- Train models on different datasets and watch the learning process in real time
-- Upload your own text files (.txt or .docx) to train on
-- Adjust model size, context window, learning rate, and training duration
+FoWBot is a browser-based tool that lets you train and explore small neural-network language models. You can:
+- Train feedforward or LSTM models on different texts and watch the learning process in real time
+- Upload your own text files (.txt or .docx)
+- Adjust architecture, model size, context window, learning rate, and training duration
 - Generate multi-word sequences and see step-by-step predictions
-- Compare how different training data shapes model behavior
+- Compare how different settings and architectures shape model behavior
 
-### Requirements
-- Python 3.8+
-- No GPU needed - runs on any laptop CPU
+### Getting Started
 
-### Quick Start
+**Download the app** from the [Releases page](../../releases):
+- **Windows:** Download `FowBot-Windows.zip`, extract, and double-click `FowBot.exe`
+- **Mac:** Download `FowBot-Mac.zip`, extract, and double-click `FowBot`
+  - First time: right-click > Open to bypass Gatekeeper
 
-**Windows:**
-1. Double-click `launch.bat`
-2. Press any key when prompted to install dependencies
-3. The app opens in your browser at http://localhost:5001
+The app starts a local server and opens in your browser. No Python installation or setup required.
 
-**Mac:**
-1. Double-click `launch.command`
-   - First time: you may need to right-click > Open to bypass Gatekeeper
-2. Press any key when prompted to install dependencies
-3. The app opens in your browser at http://localhost:5001
+### Running from Source (alternative)
 
-**Linux:**
-1. Run `bash launch.sh` in a terminal
-2. Press any key when prompted to install dependencies
-3. The app opens in your browser at http://localhost:5001
+If you prefer to run from source (requires Python 3.8+):
 
-The launcher finds your Python installation, installs numpy and flask (if needed), starts the server, and opens your browser.
+**Windows:** Double-click `launch.bat`
+**Mac:** Double-click `launch.command` (right-click > Open first time)
+**Linux:** Run `bash launch.sh`
+
+The launcher installs dependencies (numpy, flask) and starts the server at http://localhost:5001.
 
 ### Using the App
 
 **Training:**
-1. **Choose a dataset** from the dropdown, or **upload your own** (.txt or .docx)
-2. **Set parameters:**
-   - **Epochs** (default 100) - how many training passes
-   - **Learning Rate** - how fast the model learns (Slow/Medium/Fast)
-   - **Model Size** - number of hidden units (Small 64 / Medium 256 / Large 512)
-   - **Context Words** - how many previous words to consider (3 / 5 / 8)
-3. **Click Train** and watch the loss curve decrease in real time
+1. Choose a dataset from the dropdown, or upload your own (.txt or .docx)
+2. Set parameters:
+   - **Epochs** (default 100) — how many training passes
+   - **Learning Rate** — Slow (0.5) / Medium (1.0) / Fast (3.0)
+   - **Architecture** — Simple (Feedforward) or Advanced (LSTM)
+   - **Model Size** — Small (64) / Medium (256) / Large (512) hidden units
+   - **Context Words / Sequence Length** — 3 / 5 / 10 / 20
+3. Click **Train** and watch the loss curve decrease in real time
 
 **Predicting:**
-1. **Type a few words** in the prediction box
-2. **Set Words** to 1 for next-word prediction, or higher for sequence generation
-3. **Click Predict** to see the model's top predictions with confidence levels
+1. Type a few words in the prediction box
+2. Set **Words** to 1 for next-word prediction, or higher for sequence generation (up to 500)
+3. Click **Predict** to see the model's top predictions with confidence levels
 
-### How It Works
+### Architectures
 
-**Model Architecture:**
-- Feedforward neural network with word embeddings
-- Configurable context window (3-8 previous words)
-- Configurable hidden layer size (64-512 units)
-- Vocabulary limited to 5,000 most common words
+**Simple (Feedforward):** Concatenates embeddings of the previous N words and passes them through a hidden layer. Fast to train, but treats context as a fixed window with no notion of word order beyond position.
 
-**Training Process:**
-1. Builds vocabulary from your text
-2. Creates training examples (sequences of N words -> next word)
-3. Trains the neural network using gradient descent
-4. Loss should decrease over time (the model is learning!)
+**Advanced (LSTM):** Processes context words sequentially through gates that control what to remember and forget. Slower to train, but can capture sequential patterns and produce more coherent generated text.
 
-**Parameter Effects:**
-| Parameter | Larger = | Trade-off |
-|-----------|----------|-----------|
-| Epochs | Better learning | Longer training time |
-| Learning Rate | Faster convergence | May overshoot (unstable) |
-| Model Size | More capacity | Slower per epoch |
-| Context Words | More context awareness | Needs more data to learn |
+Both architectures are implemented in pure NumPy — no deep learning frameworks required.
 
 ### Included Datasets
 
-| File | Description | Size |
-|------|-------------|------|
-| `shakespeare.txt` | Shakespeare's Sonnets | ~2,600 lines |
-| `drseuss.txt` | Dr. Seuss text | ~1,200 lines |
+| File | Description |
+|------|-------------|
+| Dr. Seuss (Small) | Short, repetitive text — good for quick experiments |
+| Shakespeare Sonnets (Medium) | Poetic English with rich vocabulary |
+| Shakespeare Plays (Large) | Longer text for more thorough training |
 
 You can also upload your own `.txt` or `.docx` files through the web interface.
 
 ### Educational Experiments
 
-**Experiment 1: Data Dependency**
-- Train on Shakespeare, then predict "to be or"
-- Train on Dr. Seuss, then predict "i do not"
-- **Learning:** Models reflect their training data
+**Data dependency:** Train on Shakespeare, then predict "to be or". Train on Dr. Seuss, then predict "i do not". Models reflect their training data.
 
-**Experiment 2: Training Time**
-- Try 10 epochs vs 100 epochs vs 300 epochs
-- Watch how the loss curve changes
-- **Learning:** More training helps, but with diminishing returns
+**Training time:** Try 10 vs 100 vs 300 epochs. Watch the loss curve — more training helps, but with diminishing returns and eventual overfitting.
 
-**Experiment 3: Model Size**
-- Train Small (64) vs Medium (256) vs Large (512) on the same data
-- Compare prediction quality and training speed
-- **Learning:** Larger models can learn more, but need more data and time
+**Learning rate instability:** Train with Fast (3.0) learning rate and observe oscillations in the loss curve. Compare with Slow (0.5) for smooth convergence.
 
-**Experiment 4: Context Window**
-- Train with context 3 vs 5 vs 8
-- Try predictions with short and long phrases
-- **Learning:** More context helps the model disambiguate
+**Architecture comparison:** Train both Simple and Advanced on the same text, then generate 20 words from the same prompt. Compare coherence.
 
-**Experiment 5: Sequence Generation**
-- Train on Shakespeare (100+ epochs), then generate 10 words from "shall i compare thee"
-- **Learning:** Autoregressive generation shows how language models build text word by word
-
-### Limitations (Important for Learning!)
-
-1. **Only predicts words it has seen:** Unknown words are ignored
-2. **Limited context:** Looks at the last 3-8 words only
-3. **No understanding:** Just pattern matching, not comprehension
-4. **Data bias:** Will reflect biases in training text
-5. **Simplistic:** Real models (GPT, Claude) are much more sophisticated
+**Overfitting:** Train for 200+ epochs on a small dataset. The loss approaches zero, but generated text starts repeating training data verbatim rather than generalizing.
 
 ### Files
 
 ```
 FowBot/
-  launch.bat              - Windows launcher (double-click)
-  launch.command          - Mac launcher (double-click)
-  launch.sh               - Linux launcher (bash launch.sh)
   app.py                  - Web server
-  model.py                - Neural network model
+  model.py                - Neural network models (feedforward + LSTM)
   requirements.txt        - Python dependencies (numpy, flask)
+  fowbot.spec             - PyInstaller build configuration
   templates/index.html    - Web interface
   static/                 - CSS and JavaScript
   datasets/               - Training text files
+  launch.bat              - Windows launcher (run from source)
+  launch.command          - Mac launcher (run from source)
+  launch.sh               - Linux launcher (run from source)
+  .github/workflows/      - CI build for Windows and Mac executables
 ```
 
 ### Common Issues
 
-**App won't start**
-- Make sure Python 3.8+ is installed
-- On Windows: reinstall Python and check "Add Python to PATH"
-- On Mac: try `brew install python3` or install from python.org
-
 **Mac security warning ("unidentified developer")**
-- Right-click `launch.command` > Open (first time only)
-- Or: System Settings > Privacy & Security > click "Open Anyway"
+Right-click the app > Open (first time only), or: System Settings > Privacy & Security > Open Anyway.
 
 **Browser doesn't open**
-- Manually go to http://localhost:5001
-
-**Training takes too long**
-- Reduce epochs or use a smaller model size
-- Use a smaller dataset
+Manually go to http://localhost:5001
 
 **Predictions seem random**
-- Train for more epochs (100+ recommended)
-- Use a larger dataset
-- Try a larger model size
+Train for more epochs (100+ recommended) or use a larger model size.
 
 ---
 
-**Questions or issues?** This is a teaching tool - imperfections are features, not bugs!
+Created by Andre Mouton. Built with assistance from Claude (Anthropic).

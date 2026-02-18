@@ -1,170 +1,124 @@
-# Instructor Notes: Next-Word Prediction Language Model
+# Instructor Notes: FoWBot
 
 ## Overview
-This educational package provides a browser-based language model that students can train on their own computers. It demonstrates core concepts of how language models work without requiring expensive GPU resources or technical expertise.
+FoWBot is a browser-based tool that lets students train and interact with small language models. It demonstrates core concepts of how language models learn from data, without requiring GPU resources or technical expertise. Students can compare two neural network architectures (feedforward and LSTM) and experiment with training parameters to build intuition about model behavior.
+
+## Distribution
+
+### Recommended: Pre-built executables
+Download Windows and Mac builds from the [Releases page](../../releases). Students extract the zip and double-click to run — no Python installation needed.
+
+- **Windows:** `FowBot-Windows.zip` → extract → double-click `FowBot.exe`
+- **Mac:** `FowBot-Mac.zip` → extract → right-click > Open (first time only, due to Gatekeeper)
+
+### Alternative: Run from source
+Students with Python 3.8+ can use the launcher scripts (`launch.bat` / `launch.command`). This requires a working Python installation and is more error-prone.
 
 ## What's Included
 
-### Core Files
-- **app.py** - Flask web server (serves the browser interface)
-- **model.py** - Neural network implementation (NumPy only, ~170 lines)
-- **launch.bat / launch.sh** - One-click launchers for Windows / Mac
-- **requirements.txt** - Dependencies: numpy, flask
+### Core files
+- **app.py** — Flask web server
+- **model.py** — Feedforward and LSTM implementations (pure NumPy)
+- **templates/index.html** — Web interface with live training visualization
 
-### Documentation
-- **README.md** - Setup and usage instructions
-- **STUDENT_GUIDE.md** - Structured exercises and learning activities
-- **INSTRUCTOR_NOTES.md** - This file
+### Datasets
+| File | Size | Best for |
+|------|------|----------|
+| Dr. Seuss (Small) | ~1,200 lines | Quick experiments, visible overfitting |
+| Shakespeare Sonnets (Medium) | ~2,600 lines | Core exercises |
+| Shakespeare Plays (Large) | Larger text | Architecture comparison, longer training |
 
-### Datasets (in `datasets/` folder)
-- **shakespeare.txt** - Shakespeare's Sonnets (~2,600 lines, best for training)
-- **drseuss.txt** - Dr. Seuss text (~1,200 lines)
-- **sample_large_dataset.txt** - Future of work articles (~1,000 words)
-- **sample_future_of_work.txt** - Short future of work text (~330 words)
-
-Students can add their own `.txt` files to the `datasets/` folder.
+Students can also upload their own `.txt` or `.docx` files.
 
 ## Technical Specifications
 
-### Model Architecture
-- Feedforward neural network with word embeddings
-- Input: Last 5 words (configurable in code)
-- Hidden layer: 128 units with ReLU activation
-- Output: Probability distribution over vocabulary
-- Total parameters: ~500K-1M depending on vocabulary size
+### Architectures
+- **Simple (Feedforward):** Concatenates word embeddings, single hidden layer, ReLU activation. Fast training, no sequential awareness.
+- **Advanced (LSTM):** Sequential processing with forget/input/output gates. Slower training, better coherence in generated text.
 
-### Training
-- Mini-batch gradient descent (batch size: 32)
-- Loss: Cross-entropy
-- Optimizer: Vanilla gradient descent with fixed learning rate
-- Training time: 1-10 minutes depending on dataset and epochs
+Both are implemented in pure NumPy with no deep learning frameworks.
 
-### Web Interface
-- Flask backend on localhost:5001
-- Real-time loss curve visualization (Chart.js)
-- No internet required after initial setup (Chart.js bundled locally)
-- Works on Windows and Mac
+### Training parameters
+| Parameter | Options | Notes |
+|-----------|---------|-------|
+| Epochs | 1–500 | 100 is a good default |
+| Learning Rate | Slow (0.5) / Medium (1.0) / Fast (3.0) | Fast shows instructive instability |
+| Model Size | Small (64) / Medium (256) / Large (512) | Hidden layer units |
+| Context / Sequence Length | 3 / 5 / 10 / 20 | Input window size |
+| Architecture | Simple (Feedforward) / Advanced (LSTM) | |
 
-### Performance Expectations
-This is intentionally a **simple** model. Students should expect:
-- Modest prediction quality (not comparable to GPT)
+### Performance expectations
+This is intentionally a simple model. Students should expect:
+- Modest prediction quality (not comparable to ChatGPT)
 - Clear learning curves (loss decreases visibly)
-- Visible impact of dataset differences
-- Some nonsensical predictions (teaching moment!)
-
-## Setup for Distribution
-
-### Preparing the Zip File
-1. Make sure all files are present (run the app yourself first to verify)
-2. Delete the `venv/` folder if one exists (students will create their own)
-3. Delete any `__pycache__/` folders
-4. Zip the entire FowBot folder
-5. Upload to your LMS
-
-### Student Prerequisites
-- Python 3.8+ installed
-- The launcher scripts handle virtual environment creation and dependency installation automatically
-- Students on Windows should ensure "Add Python to PATH" was checked during Python installation
+- Visible impact of parameter and architecture choices
+- Overfitting on small datasets after 100+ epochs
+- Some nonsensical predictions (this is a teaching moment)
 
 ## Pedagogical Design
 
-### Learning Objectives
+### Learning objectives
 Students will understand:
-1. How language models learn from data
+1. How language models learn statistical patterns from data
 2. The relationship between training data and model behavior
-3. Computational constraints of AI systems
-4. Data bias and its manifestation in AI
-5. The gap between simple educational models and production systems
+3. How architecture choices (feedforward vs. LSTM) affect capabilities
+4. Parameter trade-offs: learning rate instability, overfitting, model capacity
+5. The gap between simple models and production systems (GPT, Claude)
+6. Data bias and its manifestation in AI outputs
 
-### Why These Design Choices?
+### Key teaching moments
+- **Learning rate at Fast (3.0):** Loss curve oscillates visibly — demonstrates gradient descent instability
+- **Overfitting:** After 200+ epochs on Dr. Seuss, the model memorizes rather than generalizes
+- **Architecture comparison:** LSTM generates more coherent sequences than feedforward from the same training data
+- **Data bias:** Training on different texts produces very different "worldviews" from the same prompts
 
-**Browser-based interface:**
-- No command-line experience needed
-- Visual feedback (loss curve) makes training intuitive
-- Students can focus on concepts, not tooling
-
-**Word-level (not character-level):**
-- Predictions are readable words, not letter soup
-- More intuitive for non-technical students
-
-**Next-word (not full text generation):**
-- Simpler to understand
-- Clear evaluation: are the predictions sensible?
-- Avoids complexity of sampling strategies
+### Why these design choices?
+- **Browser-based:** No command-line experience needed; visual feedback makes training intuitive
+- **Word-level predictions:** More intuitive than character-level for non-technical students
+- **Two architectures:** Lets students see concretely how model structure matters, not just data and scale
+- **Adjustable parameters:** Students can discover trade-offs through experimentation
 
 ## Class Integration
 
-### Suggested Timeline
+### Suggested timeline
 
-**Before class:** Students download, unzip, and run `launch.bat`/`launch.sh` to verify setup works.
+**Before class:** Students download and run FoWBot to verify it works.
 
-**In class (60-90 minutes):**
+**In class (60–90 minutes):**
 1. Brief demo of the tool (5 min)
-2. Students complete Exercises 1-3 from STUDENT_GUIDE.md (30 min)
+2. Students complete exercises from STUDENT_GUIDE.md (40 min)
 3. Small group discussion: compare observations (10 min)
-4. Exercise 5: bias detection (15 min)
-5. Full-class discussion on implications (15 min)
+4. Full-class discussion on implications for work and society (15 min)
 
 **After class:** Reflection paper connecting observations to course themes.
 
-### Assessment Options
+### Assessment options
 
-**Low-stakes:**
-- Completion of exercises (participation credit)
-- In-class observations shared with group
+**Low-stakes:** Completion of exercises (participation credit), in-class observations shared with group.
 
-**Medium-stakes:**
-- Comparative analysis: your simple model vs. ChatGPT
-- Dataset bias analysis
+**Medium-stakes:** Comparative analysis of architectures, or dataset bias analysis using uploaded texts.
 
-**High-stakes:**
-- Research paper connecting AI training to labor market implications
-- Design policy recommendations for AI in workplace
+**High-stakes:** Research paper connecting AI training dynamics to labor market implications.
 
 ## Common Student Questions
 
 **Q: Why are the predictions so bad?**
-A: This teaches realistic expectations. Real models have billions of parameters and train for weeks. The gap between this and ChatGPT is the point.
+A: This is the point. Real models have billions of parameters and train on terabytes of data. The gap between FoWBot and ChatGPT illustrates what scale provides.
+
+**Q: What's the difference between the two architectures?**
+A: The feedforward model sees all context words at once (like reading a sentence with all words jumbled). The LSTM reads them in order and decides what to remember — more like how you read.
 
 **Q: Can I make it better?**
-A: Yes! More epochs, larger datasets. But discuss diminishing returns and computational limits.
-
-**Q: How is this different from ChatGPT?**
-A: Scale (millions vs. billions of parameters), data (kilobytes vs. terabytes), architecture (simple feedforward vs. transformer), resources (laptop vs. supercomputer).
+A: More epochs, larger model, more data. But discuss diminishing returns and computational limits.
 
 ## Troubleshooting
 
-### Common Issues
+**Mac Gatekeeper warning:** Right-click > Open (first time only).
 
-**"Python not found" on Windows**
-- Students need to reinstall Python from python.org and check "Add Python to PATH"
+**Port 5001 already in use:** Close the previous FoWBot instance, or the previous terminal window.
 
-**Port 5001 already in use**
-- Another instance may be running. Close the previous terminal window.
-- Or edit `app.py` line at the bottom to change the port number.
-
-**Launcher script won't run on Mac**
-- May need: `chmod +x launch.sh` then `bash launch.sh`
-
-**Training is very fast (finishes instantly)**
-- This happens with very small datasets (sample_future_of_work.txt)
-- Use shakespeare.txt or drseuss.txt for a more visible training process
-- Increase epochs to 100-200
-
-## Modifications
-
-### Adding Datasets
-Simply place `.txt` files in the `datasets/` folder. They appear automatically in the dropdown.
-
-### Changing Model Parameters
-Edit `app.py` line where `WordPredictor` is instantiated:
-- `context_length=5` - number of previous words to consider
-- `vocab_size=5000` - maximum vocabulary size
-
-### Changing Port
-Edit the last line of `app.py`: `app.run(port=5001)` - change 5001 to any available port.
+**Training seems stuck:** Training is working if loss values are updating. Larger datasets and LSTM are slower per epoch.
 
 ---
 
-**Version:** 2.0 (Web interface)
-**Last Updated:** 2026
+Created by Andre Mouton. Built with assistance from Claude (Anthropic).
